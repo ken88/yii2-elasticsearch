@@ -5,12 +5,18 @@ namespace frontend\controllers;
 
 
 use common\models\Elastic;
-use function Webmozart\Assert\Tests\StaticAnalysis\object;
+use common\models\Lygoods;
 use Yii;
 use yii\data\Pagination;
 
 class GoodsController extends BaseController
 {
+
+    /**
+     * 查询es数据
+     * @return string 结果集
+     * @throws \yii\elasticsearch\Exception
+     */
     public function actionIndex()
     {
         $data = [];
@@ -22,8 +28,8 @@ class GoodsController extends BaseController
 
         # 2. 接收参数
         $cnName = Yii::$app->request->get('cn_name',''); # 商品名子
-        $price1 = Yii::$app->request->get('price1',0);   # 价钱大于
-        $price2 = Yii::$app->request->get('price2',0);   # 价钱小于
+        $price1 = Yii::$app->request->get('price1','');   # 价钱大于
+        $price2 = Yii::$app->request->get('price2','');   # 价钱小于
         $priceOrder = Yii::$app->request->get('priceOrder',null);   # 价钱排序
 
         $orderby = null;
@@ -119,5 +125,34 @@ class GoodsController extends BaseController
 
        return $this->renderPartial("index",$data);
     }
+
+    /**
+     * 创建mapping
+     */
+    public function actionAddMapping() {
+        $res = Elastic::createIndex();
+        dd($res);
+    }
+
+    /**
+     * 新增es数据
+     */
+    public function actionAdd() {
+        $goods = Lygoods::find()->asArray()->all();
+
+        foreach ($goods as $v) {
+            $es = new Elastic();
+            $es->_id = $v['goods_id'];
+            $es->goods_id = $v['goods_id'];
+            $es->goods_name = $v['goods_name'];
+            $es->cn_name = $v['cn_name'];
+            $es->shop_price = $v['shop_price'];
+            $es->original_img = $v['original_img'];
+            $res = $es->save();
+        }
+
+        dd('ok');
+    }
+
 
 }

@@ -7,7 +7,8 @@ use yii\elasticsearch\ActiveRecord;
 class Elastic extends ActiveRecord
 {
 
-    # 这个就是第二步配置的组件的名字（key值）
+
+    # 定义db链接 这个就是第二步配置的组件的名字（key值）
     public static function getDb()
     {
         return \Yii::$app->get('elasticsearch');
@@ -18,9 +19,11 @@ class Elastic extends ActiveRecord
         return "oms";
     }
 
-    public static function type()
+    # 需要返回的字段
+    public function attributes()
     {
-        return "goods";
+        # 这里就是你要查询的字段，你要查什么写什么字段就好了
+        return ['goods_name','cn_name','shop_price','original_img','mtime','goods_id'];
     }
 
     /**
@@ -31,9 +34,9 @@ class Elastic extends ActiveRecord
         # es7.x 版本去掉了type
         return ['properties' =>
             [
-                'goods_id'      => ['type' => 'long'],
+                'goods_id'      => ['type' => 'integer'],
                 'goods_name'    => ['type' => 'text'],
-                'cn_name'       => ['type' => 'text'],
+                'cn_name'       => ['type' => 'text','analyzer'=>'ik_smart'],
                 'shop_price'    => ['type'=>'float'],
                 'original_img'  => ['type' => 'keyword'],
                 'mtime'         => ['type' => 'date']
@@ -41,15 +44,12 @@ class Elastic extends ActiveRecord
         ];
     }
 
-    # 需要返回的字段
-    public function attributes()
-    {
-        return ['goods_name','cn_name','shop_price','original_img','mtime','goods_id']; //其实这里就是你要查询的字段，你要查什么写什么字段就好了
-    }
+
 
 
     /**
      * 获取映射
+     *
      * @return mixed
      */
     public static function getMapping()
