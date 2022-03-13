@@ -36,7 +36,7 @@ class GoodsController extends BaseController
 
         # 2.1 排序
         if (empty($priceOrder)) { # 没有排序条件默认 id倒序
-            $orderby = 'goods_id desc';
+            $orderby = 'id desc';
         } else {
             $orderby = $priceOrder == '价钱正序' ? 'shop_price asc' : 'shop_price desc';
         }
@@ -44,6 +44,7 @@ class GoodsController extends BaseController
         if (Yii::$app->request->get()) {
             $query = []; # 查询条件
             $i = 0;      # 记录搜素条件的下标
+            $k = 0;      # 记录搜素条件的下标
 
             # 3. 条件生成，商品名条件
             if (!empty($cnName)) {
@@ -60,28 +61,32 @@ class GoodsController extends BaseController
 
             # 3.1 价钱大于某值 条件
             if (!empty($price1)) {
-                $query['bool']['must'][$i] = [
+                # 过滤查询
+                $query['bool']['filter'][$k] = [
                     "range" => [
                         "shop_price" => [
                             "gte" => $price1
                         ]
                     ]
                 ];
-                $i++;
+                $k++;
             }
 
             # 3.2 价钱小于某值 条件
             if (!empty($price2)) {
-                $query['bool']['must'][$i] = [
+                # 过滤查询
+                $query['bool']['filter'][$k] = [
                     "range" => [
                         "shop_price" => [
                             "lte" => $price2
                         ]
                     ]
                 ];
-                $i++;
+                $k++;
             }
+
 //            dd($query);
+
 
             # 3.3  高亮查询
             $hightlight = [
@@ -95,7 +100,7 @@ class GoodsController extends BaseController
                 ]
             ];
 
-            # 2.2 通过DSL 查询es数据
+            # 3.4 通过DSL 查询es数据
             $res = $res->query($query);
         }
 
@@ -114,7 +119,7 @@ class GoodsController extends BaseController
             ->asArray()
             ->all();
 
-        $data = [
+        $data['res'] = [
             'info' => $resInfo,
             'cn_name' => $cnName,
             'price1' => $price1,
@@ -123,36 +128,71 @@ class GoodsController extends BaseController
             'pages' => $pages
         ];
 
+        # 6. 聚合查询
+        $options = [
+            "terms" =>array( # terms  表示分组的意思
+                "field" => "shop_price", # 通过那个字段分组
+                "size"=>10, # 返回的条数
+                "order"=>array("_term"=>"desc") # 当前字段排序
+            ),
+            'aggregations' =>[
+                'max_price' => [ # 分组后每组求最大值
+                    'max' => [
+                        'field' => 'shop_price'
+                    ]
+                ],
+                'sum_price' => [ # 分组后每组总价钱
+                    'sum' => [
+                        'field' => 'shop_price'
+                    ]
+                ],
+                'avg_price' => [ # 分组后每组平均价价钱
+                    'avg' => [
+                        'field' => 'shop_price'
+                    ]
+                ]
+            ]
+        ];
+        $jh = $es::find()->addAggregate('acddd',$options)->limit(0);
+        $command = $jh->createCommand();
+        $rows = $command->search([],'post');
+        $data_arr = $rows['aggregations']['acddd']['buckets'];
+        $data['jh'] = $data_arr;
+//        dd($data['jh']);
        return $this->renderPartial("index",$data);
     }
 
     /**
-     * 创建mapping
+     * 创建索引与mapping
      */
-    public function actionAddMapping() {
+    public function actionAddIndexMapping() {
+
         $res = Elastic::createIndex();
         dd($res);
     }
+
 
     /**
      * 新增es数据
      */
     public function actionAdd() {
-        $goods = Lygoods::find()->asArray()->all();
+        ini_set("memory_limit","2048M");
+        $columns = 'id,goods_name,cn_name,shop_price,original_img,mtime';
+        $goods = Lygoods::find()->select($columns)->where("id>10001")->asArray()->all();
+        dd($goods);
 
         foreach ($goods as $v) {
             $es = new Elastic();
-            $es->_id = $v['goods_id'];
-            $es->goods_id = $v['goods_id'];
+            $es->_id = $v['id'];
+            $es->id = $v['id'];
             $es->goods_name = $v['goods_name'];
             $es->cn_name = $v['cn_name'];
             $es->shop_price = $v['shop_price'];
             $es->original_img = $v['original_img'];
+            $es->mtime = $v['mtime'];
             $res = $es->save();
-        }
 
+        }
         dd('ok');
     }
-
-
 }

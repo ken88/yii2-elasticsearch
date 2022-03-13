@@ -17,7 +17,9 @@
     </style>
 </head>
 <body>
+<div>
 
+</div>
 <div class="search">
     <form action="/goods/index" method="get" id="form1">
         <div>
@@ -39,11 +41,17 @@
         </div>
     </form>
 </div>
+<div>
+    分组：
+    <?php if (!empty($jh)){foreach ($jh as $k => $v){ if ($k % 5 == 0) echo "<br>";?>
+        <span style=" margin-left: 15px;">价钱：<?php echo $v['key']?> 共 <?php echo $v['doc_count']?>个</span>
+    <?php }} ?>
+</div>
 
 <?php
-if (!empty($pages)) {
+if (!empty($res['pages'])) {
     echo LinkPager::widget([
-        'pagination' => $pages,
+        'pagination' => $res['pages'],
         'nextPageLabel' => '下一页',
         'prevPageLabel' => '上一页',
         'firstPageLabel' => '首页',
@@ -52,8 +60,9 @@ if (!empty($pages)) {
     ]);
 }
 ?>
+
 <div class="goods">
-    <?php if (!empty($info)){foreach ($info as $v){ ?>
+    <?php if (!empty($res['info'])){foreach ($res['info'] as $v){ ?>
     <div class="info">
         <div class="cn_name">
             <?php
@@ -75,7 +84,7 @@ if (!empty($pages)) {
 </body>
 </html>
 <script type="text/javascript">
-    var priceOrder = '<?= $priceOrder;?>';
+    var priceOrder = '<?= $res['priceOrder'];?>';
     if (priceOrder == '价钱正序') {
         document.getElementById('priceOrder1').className = 'color';
     } else if (priceOrder == '价钱倒序')  {

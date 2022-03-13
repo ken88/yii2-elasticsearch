@@ -7,16 +7,16 @@ use yii\elasticsearch\ActiveRecord;
 class Elastic extends ActiveRecord
 {
 
-
     # 定义db链接 这个就是第二步配置的组件的名字（key值）
     public static function getDb()
     {
         return \Yii::$app->get('elasticsearch');
     }
 
+    # 获取索引名
     public static  function index()
     {
-        return "oms";
+        return 'goods';
     }
 
     # 需要返回的字段
@@ -27,19 +27,34 @@ class Elastic extends ActiveRecord
     }
 
     /**
+     * 创建分区
+     * @return int[]
+     */
+    public static function settings() {
+        return [
+            'number_of_shards' => 6, # 一个主分区
+            'number_of_replicas' => 0 # 没有备份
+        ];
+    }
+
+    /**
+     * 创建mapping
      * @return array This model's mapping
      */
     public static function mapping()
     {
         # es7.x 版本去掉了type
-        return ['properties' =>
+        return [
+            'properties' =>
             [
-                'goods_id'      => ['type' => 'integer'],
-                'goods_name'    => ['type' => 'text'],
-                'cn_name'       => ['type' => 'text','analyzer'=>'ik_smart'],
-                'shop_price'    => ['type'=>'float'],
+                'id'      => ['type' => 'integer'],
+                'goods_name'    => ['type' => 'text','analyzer'=>'ik_max_word'],
+                'cn_name'       => ['type' => 'text','analyzer'=>'ik_max_word'],
+                'shop_price'    => ['type'=>'double'],
                 'original_img'  => ['type' => 'keyword'],
-                'mtime'         => ['type' => 'date']
+                'mtime'         => [
+                    'type' => 'date',
+                    'format' => "yyyy-MM-dd||yyyy/MM/dd||yyyy-MM-dd HH:mm:ss"]
             ]
         ];
     }
@@ -79,6 +94,7 @@ class Elastic extends ActiveRecord
         $command = $db->createCommand();
         return $command->createIndex(static::index(), [
             //'aliases' => [ /* ... */ ],
+            'settings' => static::settings(),
             'mappings' => static::mapping(),
             //'settings' => [ /* ... */ ],
         ]);
